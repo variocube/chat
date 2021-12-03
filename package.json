@@ -4,7 +4,7 @@
   "description": "Variocube Chat Client",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/onlinegroupat/servicecube.git"
+    "url": "git+https://github.com/variocube/chat-js.git"
   },
   "main": "esm/index.js",
   "typings": "esm/index.d.ts",
