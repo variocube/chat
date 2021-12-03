@@ -8,6 +8,8 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+          registry-url: https://npm.pkg.github.com/
+          scope: '@variocube'
       - run: npm ci
       - run: npm run build
       - if: startsWith(github.ref, 'refs/tags/')
