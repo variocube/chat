@@ -1,6 +1,6 @@
 {
   "name": "@variocube/chat-js",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Variocube Chat Client",
   "repository": {
     "type": "git",
@@ -17,8 +17,8 @@
   "author": "",
   "license": "ISC",
   "peerDependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
   },
   "dependencies": {
     "@material-ui/core": "^4.3.2",
