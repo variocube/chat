@@ -1,6 +1,6 @@
 {
-  "name": "@variocube/chat-client",
-  "version": "1.0.2",
+  "name": "@variocube/chat-js",
+  "version": "1.0.3",
   "description": "Variocube Chat Client",
   "repository": {
     "type": "git",
