@@ -4,11 +4,11 @@
     "sourceMap": true,
     "strict": true,
     "declaration": true,
-    "jsxFactory": "createElement",
     "jsx": "react",
     "module": "esnext",
     "target": "es2015",
     "outDir": "./esm",
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "./src/**/*",

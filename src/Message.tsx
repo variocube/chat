@@ -1,8 +1,9 @@
-import {createElement} from "react";
+import React from "react";
 import * as moment from "moment";
-import {makeStyles, Theme, Typography} from "@material-ui/core";
-import {lightBlue} from "@material-ui/core/colors";
-import {Check} from "@material-ui/icons";
+import {Theme, Typography} from "@mui/material";
+import CheckIcon from "@mui/icons-material/Check";
+import {lightBlue} from "@mui/material/colors";
+import {makeStyles} from "@mui/styles";
 
 export interface ChatMessageProps {
     subject: string;
@@ -24,7 +25,7 @@ export function Message(props: ChatMessageProps) {
             <Typography variant="body1" className={styles.text}>{message}</Typography>
             <Typography variant="caption" className={styles.timeStamp}>
                 {prettifyDate(created)}
-                { ours && read && <Check className={styles.checkIcon} /> }
+                { ours && read && <CheckIcon className={styles.checkIcon} /> }
             </Typography>
         </div>
     );

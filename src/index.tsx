@@ -1,171 +1,19 @@
-import {createElement, Component, RefObject, createRef} from "react";
+import React, {useState, useRef, useEffect} from "react";
 import {
     Button,
     CircularProgress,
     SnackbarContent,
-    TextField,
-    WithStyles,
-    withStyles,
-    createStyles,
-    Theme
-} from "@material-ui/core";
-import SendIcon from "@material-ui/icons/Send";
-import {ChatObject, fetchChat, markMessagesRead, postMessage} from "./backend";
+    TextField
+} from "@mui/material";
+import {blueGrey} from "@mui/material/colors";
+import {makeStyles} from "@mui/styles";
+import SendIcon from "@mui/icons-material/Send";
 import {MessageList} from "./MessageList";
-import {blueGrey} from "@material-ui/core/colors";
+import {ChatObject, fetchChat, markMessagesRead, postMessage} from "./backend";
 
 const MARK_MESSAGES_READ_TIMEOUT = 5000;
 
-export interface ChatProps extends WithStyles<any> {
-    url: string;
-    us: string;
-    bearerToken?: string;
-    customerToken?: string;
-    className?: string;
-    embedded?: boolean;
-}
-
-interface ChatState {
-    chat?: ChatObject;
-    error?: string;
-    message: string;
-}
-
-class Chat extends Component<ChatProps, ChatState> {
-
-    private messagesReadTimeout?: number;
-    private readonly chatLogsRef: RefObject<HTMLDivElement>;
-
-    constructor(props: ChatProps) {
-        super(props);
-        this.chatLogsRef = createRef();
-        this.state = {
-            message: ''
-        };
-    }
-
-    async componentDidMount() {
-        await this.loadChat();
-    }
-
-    async componentDidUpdate(prevProps: Readonly<ChatProps>, prevState: Readonly<ChatState>, snapshot?: any) {
-        if(prevProps.url != this.props.url) {
-            await this.loadChat();
-        }
-    }
-
-    componentWillUnmount(): void {
-        if(this.messagesReadTimeout) {
-            clearTimeout(this.messagesReadTimeout);
-            this.messagesReadTimeout = undefined;
-        }
-    }
-
-    render() {
-        const {message} = this.state;
-        const styles = this.props.classes;
-        return (
-            <div className={styles.chat}>
-                <div className={this.props.embedded ? styles.chatLogsEmbedded : styles.chatLogs} id="variocubeChatLogs" ref={this.chatLogsRef}>
-                    {
-                        this.renderContent()
-                    }
-                </div>
-                <div className={styles.chatInputWrapper}>
-                    <TextField
-                        fullWidth
-                        value={message}
-                        onChange={(event) => this.setState({ message: event.target.value })}
-                        className={styles.chatInput}
-                        margin="none"
-                        onKeyPress={(event) => { if(event.key === 'Enter') { this.sendMessage(); } } }
-                    />
-                    <Button disabled={!this.state.message} color="primary" onClick={this.sendMessage.bind(this)}><SendIcon className={styles.chatSendIcon}/></Button>
-                </div>
-            </div>
-        );
-    }
-
-    private renderContent() {
-        const {chat, error} = this.state;
-        const {us} = this.props;
-
-        if (error) {
-            return (
-                <SnackbarContent
-                    message={error}
-                    action={<Button color="primary" onClick={this.loadChat}>Reload</Button>}/>
-            );
-        }
-        else if (chat) {
-            return (
-                <MessageList messages={chat.messages} us={us} />
-            );
-        }
-        else {
-            return (
-                <CircularProgress/>
-            );
-        }
-    }
-
-    private scrollToLastMessage() {
-        const logs = this.chatLogsRef.current;
-        if(logs) {
-            window.requestAnimationFrame(() => {
-                console.log('Scrolling animation frame ' + logs.scrollHeight);
-                logs.scrollTop = logs.scrollHeight;
-            });
-        }
-    }
-
-    private async sendMessage() {
-        try {
-            const { bearerToken, customerToken } = this.props;
-            const chat = await postMessage(this.props.url, this.props.us, this.state.message, bearerToken, customerToken);
-            this.setState({
-                message: '',
-                chat: chat
-            });
-            this.scrollToLastMessage();
-        } catch (ex) {
-            return this.setState({
-                error: `${ex}`
-            });
-        }
-    }
-
-    private loadChat = async () => {
-        try {
-            const url = `${this.props.url}?us=${this.props.us}`;
-            const { bearerToken, customerToken } = this.props;
-
-            const chat = await fetchChat(url, bearerToken, customerToken);
-            await this.markMessagesAsRead(chat);
-            this.setState({chat, error: undefined});
-            this.scrollToLastMessage();
-        } catch (e) {
-            this.setState({chat: undefined, error: `${e}`});
-        }
-    };
-
-    private async markMessagesAsRead(chat: ChatObject) {
-        const us = this.props.us;
-        const url = this.props.url;
-        const { bearerToken, customerToken } = this.props;
-        const messageUuids = chat.messages.filter(m => !m.read && m.sender != us).map(m => m.uuid);
-        if(messageUuids.length > 0) {
-            console.log(`Marking ${messageUuids.length} messages as read in ${MARK_MESSAGES_READ_TIMEOUT} msec.`);
-            this.messagesReadTimeout = setTimeout(() => {
-                markMessagesRead(url, us, messageUuids, bearerToken, customerToken);
-                this.messagesReadTimeout = undefined;
-            }, MARK_MESSAGES_READ_TIMEOUT);
-        }
-    }
-
-}
-
-const useStyles = (theme: Theme) => createStyles ({
+const useStyles = makeStyles({
     chat: {
         height: '100%',
         display: 'flex',
@@ -213,4 +61,123 @@ const useStyles = (theme: Theme) => createStyles ({
     }
 });
 
-export default withStyles(useStyles)(Chat);
+type ChatProps = {
+    url: string,
+    us: string,
+    bearerToken?: string,
+    customerToken?: string,
+    embedded?: boolean,
+}
+
+interface ChatState {
+    chat?: ChatObject;
+    error?: string;
+    message: string;
+}
+
+export const Chat = ({url, us, bearerToken, customerToken, embedded}: ChatProps) => {
+    const [chat, setChat] = useState<ChatObject>();
+    const [error, setError] = useState<string>();
+    const [message, setMessage] = useState('');
+    const chatLogsRef = useRef<HTMLDivElement>(null);
+
+    let messagesReadTimeout: number|undefined;
+
+    useEffect(() => {
+        loadChat().then();
+
+        return () => {
+            if (messagesReadTimeout) {
+                clearTimeout(messagesReadTimeout);
+                messagesReadTimeout = undefined;
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        loadChat().then();
+    }, [url, us]);
+
+    const loadChat = async () => {
+        setChat(undefined);
+        setError(undefined);
+        try {
+            const chat = await fetchChat(`${url}?us=${us}`, bearerToken, customerToken);
+            await markMessagesAsRead(chat);
+            setChat(chat);
+            scrollToLastMessage();
+        } catch (e) {
+            setError(`${e}`);
+        }
+    }
+
+    const markMessagesAsRead = async (chat: ChatObject) => {
+        const messageUuids = chat.messages.filter(m => !m.read && m.sender != us).map(m => m.uuid);
+        if(messageUuids.length > 0) {
+            console.log(`Marking ${messageUuids.length} messages as read in ${MARK_MESSAGES_READ_TIMEOUT} msec.`);
+            messagesReadTimeout = setTimeout(() => {
+                markMessagesRead(url, us, messageUuids, bearerToken, customerToken);
+                messagesReadTimeout = undefined;
+            }, MARK_MESSAGES_READ_TIMEOUT);
+        }
+    }
+
+    const scrollToLastMessage = () => {
+        const logs = chatLogsRef.current;
+        if (logs) {
+            window.requestAnimationFrame(() => {
+                console.log('Scrolling animation frame ' + logs.scrollHeight);
+                logs.scrollTop = logs.scrollHeight;
+            });
+        }
+    }
+
+    const sendMessage = async () => {
+        try {
+            const chat = await postMessage(url, us, message, bearerToken, customerToken);
+            setMessage('');
+            setChat(chat);
+            scrollToLastMessage();
+        } catch (e) {
+            setError(`${e}`);
+        }
+    }
+
+    const renderContent = () => {
+        if (error) {
+            return (
+                <SnackbarContent
+                    message={error}
+                    action={<Button color="primary" onClick={loadChat}>Reload</Button>}/>
+            );
+        } else if (chat) {
+            return (
+                <MessageList messages={chat.messages} us={us} />
+            );
+        } else {
+            return (
+                <CircularProgress/>
+            );
+        }
+    }
+
+    const classes = useStyles();
+    return (
+        <div className={classes.chat}>
+            <div id="variocubeChatLogs"  className={embedded ? classes.chatLogsEmbedded : classes.chatLogs} ref={chatLogsRef}>
+                { renderContent() }
+            </div>
+            <div className={classes.chatInputWrapper}>
+                <TextField
+                    fullWidth
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    className={classes.chatInput}
+                    margin="none"
+                    onKeyPress={(event) => { if(event.key === 'Enter') { sendMessage().then() }}}
+                />
+                <Button disabled={!message} color="primary" onClick={sendMessage}><SendIcon className={classes.chatSendIcon}/></Button>
+            </div>
+        </div>
+    )
+}
